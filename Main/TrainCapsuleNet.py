@@ -3,7 +3,7 @@ import timeit
 from random import shuffle
 
 # Import Models
-from Models.CNNModel import *
+from Models.CapsuleModel import *
 
 # Import Utils
 from Utils.MNistDataHelper import *      # Load dataset
@@ -20,10 +20,11 @@ TRAIN_STATE         = True     # Training state
 VALID_STATE         = False    # Validation state
 BATCH_SIZE          = 16
 NUM_EPOCH           = 20
-LEARNING_RATE       = 0.003        # Starting learning rate
-DISPLAY_FREQUENCY   = 500;         INFO_DISPLAY = '\r%sLearning rate = %f - Epoch = %d - Iter = %d - Cost = %f'
+LEARNING_RATE       = 0.003       # Starting learning rate
+DISPLAY_FREQUENCY   = 200;         INFO_DISPLAY = '\r%sLearning rate = %f - Epoch = %d - Iter = %d - Cost = %f'
 SAVE_FREQUENCY      = 2500
 VALIDATE_FREQUENCY  = 2500
+VISUALIZE_FREQUENCY = 2000
 
 START_EPOCH     = 0
 START_ITERATION = 0
@@ -44,9 +45,9 @@ STATE_PATH        = SETTING_PATH + 'SimpleCNN_CurrentState.ckpt'
 BEST_PREC_PATH    = SETTING_PATH + 'SimpleCNN_Prec_Best.ckpt'
 
 #  GLOBAL VARIABLES
-dataset    = None
-CNN_model  = None
-TB_hanlder = None
+dataset       = None
+Capsule_model = None
+TB_hanlder    = None
 
 ########################################################################################################################
 #                                                                                                                      #
@@ -64,9 +65,9 @@ def _load_dataset(_all_path):
 #    CREATE FEATURE EXTRACTION MODEL                                                                                   #
 #                                                                                                                      #
 ########################################################################################################################
-def _create_CNN_model():
-    global CNN_model
-    CNN_model = CNNModel()
+def _create_Capsule_model():
+    global Capsule_model
+    Capsule_model = CapsuleModel()
 
 ########################################################################################################################
 #                                                                                                                      #
@@ -74,7 +75,7 @@ def _create_CNN_model():
 #                                                                                                                      #
 ########################################################################################################################
 def _create_TSBoard_model(_all_path):
-    global CNN_model, \
+    global Capsule_model, \
            TB_hanlder
     TB_hanlder = TSBoardHandler(_save_path = _all_path['tsboard_path'])
 
@@ -106,22 +107,18 @@ def _shuffle_data(_data):
             for _batch in _data]
     return data
 
-def _extract_feature(_model,
-                     _set_x):
-    _num_sample = len(_set_x)
-    _num_batch  = int(numpy.ceil(_num_sample * 1.0 / BATCH_SIZE))
-    feature = []
-    for _batch_id in range(_num_batch):
-        _sub_set_x = _set_x[_batch_id      * BATCH_SIZE :
-                           (_batch_id + 1) * BATCH_SIZE, ]
-        _result = _model.feat_ext_func(VALID_STATE,
-                                       VALID_STATE,
-                                       VALID_STATE,
-                                       len(_sub_set_x),
-                                       _sub_set_x)
-        feature.append(_result[0])
-    feature = numpy.concatenate(tuple(feature), axis = 0)
-    return feature
+def _scale_linear(_data,
+                 _min,
+                 _max):
+    _min_data = numpy.min(_data)
+    _max_data = numpy.max(_data)
+    return (_data - _min_data) / (_max_data - _min_data) * (_max - _min) + _min
+
+def _scale_log(_data,
+               _min,
+               _max):
+    _data = numpy.log(_data)
+    return _scale_linear(_data, _min, _max)
 
 ########################################################################################################################
 #                                                                                                                      #
@@ -137,8 +134,8 @@ def _valid_model(_session,
     _valid_set_y = _shuffle_data([_valid_set_x, _valid_set_y])
 
     # --- Info params ---
-    _precs = []
-    _iter  = 0
+    _prec = []
+    _iter = 0
     _num_batch_valided_data = len(_valid_set_x) // BATCH_SIZE
     for _id_batch_valided_data in range(_num_batch_valided_data):
         _valid_start_time = timeit.default_timer()
@@ -148,43 +145,21 @@ def _valid_model(_session,
         _valid_batch_y = _valid_set_y[ _id_batch_valided_data      * BATCH_SIZE:
                                       (_id_batch_valided_data + 1) * BATCH_SIZE, ]
         _iter += 1
-        _result = _model.valid_func(_session  = _session,
-                                    _state    = VALID_STATE,
-                                    _batch_x  = _valid_batch_x,
-                                    _batch_y  = _valid_batch_y)
-        _precs.append(_result[0])
+        _result = _model.valid_func(_session    = _session,
+                                    _state      = VALID_STATE,
+                                    _batch_size = BATCH_SIZE,
+                                    _batch_x    = _valid_batch_x,
+                                    _batch_y    = _valid_batch_y)
+        _prec.append(_result[0])
         _valid_end_time = timeit.default_timer()
         # Print information
         print '\r|-- Valid %d / %d batch - Time = %f' % (_id_batch_valided_data, _num_batch_valided_data, _valid_end_time - _valid_start_time),
 
         if _iter % DISPLAY_FREQUENCY == 0:
             # Print information of current training in progress
-            print ('Precision = %f' % (numpy.mean(_precs)))
+            print ('Prec = %f' % (numpy.mean(_prec)))
 
-    return numpy.mean(_precs)
-
-# def _merge_data(_data):
-#     data = numpy.concatenate(tuple(_data))
-#     return data
-#
-# def _print_close_sample(_model,
-#                         _thres,
-#                         _num_samples):
-#     gen_sample = []
-#     while (True):
-#         _samples, _probs  = _model.gen1_sample_func(VALID_STATE,
-#                                                     VALID_STATE,
-#                                                     64,
-#                                                     numpy.zeros((BATCH_SIZE, 1, 28, 28), dtype = 'float32'))
-#         for _sample, _prob in zip(_samples, _probs):
-#             if _prob <= _thres:
-#                 gen_sample.append(_sample)
-#         if len(gen_sample) >= _num_samples:
-#             break
-#     gen_sample = gen_sample[:_num_samples]
-#     gen_sample = numpy.concatenate(tuple(gen_sample), axis = 0)
-#     gen_sample = gen_sample.reshape((_num_samples, 1, 28, 28))
-#     return gen_sample
+    return numpy.mean(_prec)
 
 ########################################################################################################################
 #                                                                                                                      #
@@ -193,7 +168,7 @@ def _valid_model(_session,
 ########################################################################################################################
 def _train_test_model(_all_path):
     global dataset, \
-           CNN_model, \
+           Capsule_model, \
            TB_hanlder
     # ===== Prepare path =====
     _setting_path     = _all_path['setting_path']
@@ -206,6 +181,9 @@ def _train_test_model(_all_path):
     _train_set_y = dataset.train_set_y
     _train_set_x, \
     _train_set_y = _shuffle_data([_train_set_x, _train_set_y])
+
+    _visual_set_x = _train_set_x[:25]
+    _visual_set_y = _train_set_y[:25]
 
     _valid_set_x = dataset.valid_set_x
     _valid_set_y = dataset.valid_set_y
@@ -281,12 +259,12 @@ def _train_test_model(_all_path):
             _train_batch_y = _train_set_y[_id_batch      * BATCH_SIZE :
                                          (_id_batch + 1) * BATCH_SIZE, ]
 
-            _train_result = CNN_model.train_func(_session       = _session,
-                                                 _state         = TRAIN_STATE,
-                                                 _learning_rate = _learning_rate,
-                                                 _batch_size    = BATCH_SIZE,
-                                                 _batch_x       = _train_batch_x,
-                                                 _batch_y       = _train_batch_y)
+            _train_result = Capsule_model.train_func(_session       = _session,
+                                                     _state         = TRAIN_STATE,
+                                                     _learning_rate = _learning_rate,
+                                                     _batch_size    = BATCH_SIZE,
+                                                     _batch_x       = _train_batch_x,
+                                                     _batch_y       = _train_batch_y)
 
             # Temporary save info
             _cost_train_temp.append(_train_result[0])
@@ -342,12 +320,12 @@ def _train_test_model(_all_path):
             if _iter % VALIDATE_FREQUENCY == 0:
                 print ('\n------------------- Validate Model -------------------')
                 _prec_valid = _valid_model(_session    = _session,
-                                           _model      = CNN_model,
+                                           _model      = Capsule_model,
                                            _valid_data = [_valid_set_x, _valid_set_y])
                 iter_valid_record.append(_iter)
                 prec_valid_record.append(_prec_valid)
                 print ('\n+ Validate model finished! Prec = %f' % (_prec_valid))
-                print ('\n------------------- Validate Model (Done) -------------------')
+                print ('------------------- Validate Model (Done) -------------------')
 
                 # Add summary
                 TB_hanlder.log_scalar(_name_scope = 'Valid',
@@ -364,6 +342,25 @@ def _train_test_model(_all_path):
                                 save_path = _best_prec_path)
                     print ('+ Save best prec model ! Complete !')
 
+            if _iter % VISUALIZE_FREQUENCY == 0:
+                print ('\n------------------- Visualize Model -------------------')
+                _feature_maps = Capsule_model.recon_func(_session    = _session,
+                                                         _state      = TRAIN_STATE,
+                                                         _batch_size = len(_visual_set_x),
+                                                         _batch_x    = _visual_set_x,
+                                                         _batch_y    = _visual_set_y)[0]
+                _feature_maps = _scale_linear(_feature_maps, 0, 255)
+                _origin_set_x = _visual_set_x.reshape((len(_visual_set_x), 28, 28, 1))
+                _origin_set_x = _scale_linear(_origin_set_x, 0, 255)
+                _feature_maps = numpy.concatenate((_feature_maps, _origin_set_x), axis = 1)
+                _feature_maps = numpy.squeeze(_feature_maps)
+                # Add summary
+                TB_hanlder.log_images(_name_scope = 'Train',
+                                      _name       = 'Images',
+                                      _images     = _feature_maps,
+                                      _step       = _iter)
+                print ('\n------------------- Visualize Model (Done) ------------')
+
     # ===== Load best model =====
     _saver = tf.train.Saver()
     print ('|-- Load best model !')
@@ -375,7 +372,7 @@ def _train_test_model(_all_path):
     # ===== Testing =====
     print ('\n------------------- Test Model -------------------')
     _prec_test = _valid_model(_session    = _session,
-                              _model      = CNN_model,
+                              _model      = Capsule_model,
                               _valid_data = [_test_set_x, _test_set_y])
     print ('\n+ Test model finished! Prec = %f' % (_prec_test))
     print ('\n------------------- Test Model (Done) -------------------')
@@ -393,6 +390,6 @@ if __name__ == '__main__':
     _all_path['best_prec_path']   = BEST_PREC_PATH
 
     _load_dataset(_all_path = _all_path)
-    _create_CNN_model()
+    _create_Capsule_model()
     _create_TSBoard_model(_all_path = _all_path)
     _train_test_model(_all_path = _all_path)
