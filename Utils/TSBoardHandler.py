@@ -1,5 +1,7 @@
 import tensorflow as tf
 import numpy
+import matplotlib.pyplot as plt
+from StringIO import StringIO
 
 class TSBoardHandler():
     def __init__(self,
@@ -34,6 +36,31 @@ class TSBoardHandler():
             _summary_value = tf.Summary.Value(tag          = _name,
                                               simple_value = _value)
             _summary = tf.Summary(value = [_summary_value])
+            self.summary_folder.add_summary(_summary, _step)
+            self.summary_folder.flush()
+
+    def log_images(self,
+                   _name_scope,
+                   _name,
+                   _images,
+                   _step):
+        with tf.name_scope(_name_scope):
+            _im_summaries = []
+            for _idx, _img in enumerate(_images):
+                _str = StringIO()
+                plt.imsave(_str, _img, format = 'jpg')
+
+                # Create an Image object
+                _img_sum = tf.Summary.Image(encoded_image_string = _str.getvalue(),
+                                            height               = _img.shape[0],
+                                            width                = _img.shape[1])
+
+                # Create a Summary value
+                _im_summaries.append(tf.Summary.Value(tag   = '%s/%d' % (_name, _idx),
+                                                      image = _img_sum))
+
+            # Create and write Summary
+            _summary = tf.Summary(value = _im_summaries)
             self.summary_folder.add_summary(_summary, _step)
             self.summary_folder.flush()
 
