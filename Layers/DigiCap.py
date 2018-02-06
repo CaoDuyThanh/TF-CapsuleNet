@@ -21,7 +21,11 @@ def DigiCap(_inputs,
         #                     dtype       = tf.float32,
         #                     initializer = tf.zeros_initializer(),
         #                     trainable   = False)
-        b = tf.constant(numpy.zeros([1, _input_shape[1], _num_capsule, 1, 1], dtype = numpy.float32), name = 'b')
+
+        biases = tf.get_variable(name  = 'bias',
+                                 shape = (1, 1, _num_capsule, _dim_vector, 1))
+
+        b = tf.constant(numpy.zeros([25, _input_shape[1], _num_capsule, 1, 1], dtype = numpy.float32), name = 'b')
 
 
     # do tiling for input and W before matmul
@@ -41,11 +45,11 @@ def DigiCap(_inputs,
 
             if _iter == _num_routing - 1:
                 _s_j = tf.multiply(_c_ij, _u_hat)
-                _s_j = tf.reduce_sum(_s_j, axis = 1, keep_dims = True)
+                _s_j = tf.reduce_sum(_s_j, axis = 1, keep_dims = True) + biases
                 v_j = squash(_s_j)
             else:
                 _s_j = tf.multiply(_c_ij, _u_hat_stopped)
-                _s_j = tf.reduce_sum(_s_j, axis=1, keep_dims=True)
+                _s_j = tf.reduce_sum(_s_j, axis = 1, keep_dims = True) + biases
                 v_j = squash(_s_j)
 
                 v_j_tiled = tf.tile(v_j, [1, 1152, 1, 1, 1])
