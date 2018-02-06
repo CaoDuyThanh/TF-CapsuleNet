@@ -33,21 +33,21 @@ class EncodeModel():
                                                            activation  = None,
                                                            name        = 'conv2d')
 
-                # --- Batch normalization ---
-                self.layers['st1_batchnorm'] = tf.layers.batch_normalization(inputs   = self.layers['st1_conv'],
-                                                                             center   = True,
-                                                                             scale    = True,
-                                                                             name     = 'batchnorm',
-                                                                             training = self.state)
-
-                # --- Relu ---
-                self.layers['st1_relu'] = tf.nn.relu(features = self.layers['st1_batchnorm'],
-                                                     name     = 'relu')
+                # # --- Batch normalization ---
+                # self.layers['st1_batchnorm'] = tf.layers.batch_normalization(inputs   = self.layers['st1_conv'],
+                #                                                              center   = True,
+                #                                                              scale    = True,
+                #                                                              name     = 'batchnorm',
+                #                                                              training = self.state)
+                #
+                # # --- Relu ---
+                # self.layers['st1_relu'] = tf.nn.relu(features = self.layers['st1_batchnorm'],
+                #                                      name     = 'relu')
 
             # ----- Stack 2 -----
             with tf.variable_scope('stack2'):
                 # --- Primary capsule ---
-                self.layers['st2_pricap'] = PrimaryCap(_inputs      = self.layers['st1_relu'],
+                self.layers['st2_pricap'] = PrimaryCap(_inputs      = self.layers['st1_conv'],
                                                        _n_channels  = 32,
                                                        _dim_vector  = 8,
                                                        _kernel_size = [9, 9],
