@@ -18,12 +18,12 @@ from Utils.TSBoardHandler import *       # Tensorboard handler
 # TRAINING HYPER PARAMETER
 TRAIN_STATE         = True     # Training state
 VALID_STATE         = False    # Validation state
-BATCH_SIZE          = 16
+BATCH_SIZE          = 25
 NUM_EPOCH           = 20
-LEARNING_RATE       = 0.003       # Starting learning rate
-DISPLAY_FREQUENCY   = 200;         INFO_DISPLAY = '\r%sLearning rate = %f - Epoch = %d - Iter = %d - Cost = %f'
-SAVE_FREQUENCY      = 2500
-VALIDATE_FREQUENCY  = 2500
+LEARNING_RATE       = 0.00001       # Starting learning rate
+DISPLAY_FREQUENCY   = 500;         INFO_DISPLAY = '\r%sLearning rate = %f - Epoch = %d - Iter = %d - Cost = %f'
+SAVE_FREQUENCY      = 2000
+VALIDATE_FREQUENCY  = 1000
 VISUALIZE_FREQUENCY = 2000
 
 START_EPOCH     = 0
@@ -40,9 +40,9 @@ DATASET_PATH    = '/media/badapple/Data/Projects/Machine Learning/Dataset/MNIST/
 # STATE PATH
 SETTING_PATH      = '../Pretrained/'
 TSBOARD_PATH      = SETTING_PATH + 'Tensorboard/'
-RECORD_PATH       = SETTING_PATH + 'SimpleCNN_Record.ckpt'
-STATE_PATH        = SETTING_PATH + 'SimpleCNN_CurrentState.ckpt'
-BEST_PREC_PATH    = SETTING_PATH + 'SimpleCNN_Prec_Best.ckpt'
+RECORD_PATH       = SETTING_PATH + 'CapsuleNet_Record.ckpt'
+STATE_PATH        = SETTING_PATH + 'CapsuleNet_CurrentState.ckpt'
+BEST_PREC_PATH    = SETTING_PATH + 'CapsuleNet_Prec_Best.ckpt'
 
 #  GLOBAL VARIABLES
 dataset       = None
